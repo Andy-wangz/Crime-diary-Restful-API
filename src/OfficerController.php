@@ -1,133 +1,168 @@
 <?php
 
+require_once 'AuditLogger.php';
+require_once 'OfficerGateway.php';
+
+
+
 class OfficerController {
-    public function __construct(private OfficerGateway $gateway) {}
+    private AuditLogger $logger;
 
-    // REGISTER OFFICER
-    // public function registerOfficer() {
-    //     // Ensure request is POST and content-type is multipart/form-data
-    //     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    //         http_response_code(405);
-    //         echo json_encode(["message" => "Method not allowed."]);
-    //         return;
-    //     }
+    public function __construct(private OfficerGateway $gateway) {
+        $this->logger = new AuditLogger($this->gateway->getConnection());  
 
-    //     // Required fields
-    //     $required = ["first_name", "last_name", "email", "password", "employment_number"];
-    //     foreach ($required as $field) {
-    //         if (empty($_POST[$field])) {
-    //             http_response_code(422);
-    //             echo json_encode(["message" => "$field is required."]);
-    //             return;
-    //         }
-    //     }
+    }
 
-    //     // Handle photo upload
-    //     $photoPath = null;
-    //     if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
-    //         $uploadDir = __DIR__ . "/../../uploads/";
-    //         if (!is_dir($uploadDir)) {
-    //             mkdir($uploadDir, 0777, true);
-    //         }
 
-    //         $fileTmp = $_FILES['photo']['tmp_name'];
-    //         $fileName = uniqid("officer_") . "_" . basename($_FILES['photo']['name']);
-    //         $targetPath = $uploadDir . $fileName;
 
-    //         if (move_uploaded_file($fileTmp, $targetPath)) {
-    //             $photoPath = "uploads/" . $fileName;
-    //         } else {
-    //             http_response_code(500);
-    //             echo json_encode(["message" => "Failed to upload photo."]);
-    //             return;
-    //         }
-    //     }
-
-    //     // Check for existing email or employment number
-    //     $existing = $this->gateway->getOfficerByEmailOrEmploymentNumber($_POST["email"], $_POST["employment_number"]);
-    //     if ($existing) {
-    //         http_response_code(409);
-    //         echo json_encode(["message" => "Email or Employment number already exists."]);
-    //         return;
-    //     }
-
-    //     // Hash the password
-    //     $passwordHash = password_hash($_POST["password"], PASSWORD_DEFAULT);
-
-    //     // Prepare data
-    //     $officerData = [
-    //         "first_name" => $_POST["first_name"],
-    //         "middle_name" => $_POST["middle_name"] ?? "",
-    //         "last_name" => $_POST["last_name"],
-    //         "email" => $_POST["email"],
-    //         "employment_number" => $_POST["employment_number"],
-    //         "officer_rank" => $_POST["officer_rank"] ?? "",
-    //         "phone" => $_POST["phone"] ?? "",
-    //         "password" => $passwordHash,
-    //         "role" => $_POST["role"] ?? "user",
-    //         "authorization_level" => $_POST["authorization_level"] ?? "",
-    //         "agency_id" => $_POST["agency_id"] ?? null,
-    //         "zone_id" => $_POST["zone_id"] ?? null,
-    //         "state_id" => $_POST["state_id"] ?? null,
-    //         "lga_id" => $_POST["lga_id"] ?? null,
-    //         "division_id" => $_POST["division_id"] ?? null,
-    //         "photo" => $photoPath,
-    //     ];
-
-    //     // Save to DB
-    //     $officer = $this->gateway->registerOfficer($officerData);
-    //     if ($officer) {
-    //         unset($officer["password"]); // don't return password hash
-    //         http_response_code(201);
-    //         echo json_encode([
-    //             "message" => "Officer registered successfully.",
-    //             "officer" => $officer,
-    //         ]);
-    //     } else {
-    //         http_response_code(500);
-    //         echo json_encode(["message" => "Registration failed."]);
-    //     }
-    // }
-
-    // LOGIN OFFICER
-    // public function login(): void {
-    //     $data = json_decode(file_get_contents("php://input"), true);
-
-    //     if (
-    //         empty($data["email"]) ||
-    //         empty($data["employment_number"]) ||
-    //         empty($data["password"])
-    //     ) {
-    //         http_response_code(422);
-    //         echo json_encode(["message" => "Email, Employment Number, and Password are required."]);
-    //         return;
-    //     }
-
-    //     $user = $this->gateway->getOfficerByEmailOrEmploymentNumber($data["email"], $data["employment_number"]);
-    //     if (!$user || !password_verify($data["password"], $user["password"])) {
-    //         http_response_code(401);
-    //         echo json_encode(["message" => "Invalid credentials."]);
-    //         return;
-    //     }
-
-    //     // In production: issue session/JWT here
-    //     http_response_code(200);
-    //     echo json_encode([
-    //         "message" => "Login successful.",
-    //         "user" => [
-    //             "id" => $user["id"],
-    //             "first_name" => $user["first_name"],
-    //             "last_name" => $user["last_name"],
-    //             "email" => $user["email"]
-    //         ]
-    //     ]);
-    // }
-
-    //     public function getAllOfficers(): void {
-    //     $officers = $this->gateway->getAllOfficersWithAgency();
+        public function processRequest(string $method, ?string $id) {
+            if ($id){
+                $this->processResourceRequest($method, $id);
     
-    //     echo json_encode($officers);
-    // }
+            }
+            else {
+                $this->processCollectionRequest($method);
+    
+            }
+    
+        }
+    
+        //NOTE: By ID, url with product/id for GET, PATCH(UPDATE) and DELETE
+        private function processResourceRequest(string $method, string $id) {
+            
+            $officerSummary = $this->gateway->getOfficer($id);     // For GET (summary)
+            $officerFull    = $this->gateway->getOfficerId($id);   // For PATCH (full data)
+
+    
+            // if (! $officerSummary) {
+            //     http_response_code(404);
+    
+            //     echo json_encode(["message" => "Officer not found"]);
+    
+            //     return;
+            // }
+
+            if (!$officerSummary || !$officerFull) {
+                http_response_code(404);
+                echo json_encode(["message" => "Officer not found"]);
+                return;
+            }
+        
+    
+            switch($method) {
+                case "GET":
+                echo json_encode($officerSummary);
+                break;
+    
+                case "PATCH":
+                        $data = (array) json_decode(file_get_contents("php://input"), true);
+                        $errors = $this->getValidationErrors($data, false);
+                    
+                        if (!empty($errors)) {
+                            http_response_code(422);
+                            echo json_encode(["error" => $errors]);
+                            break;
+                        }
+                    
+                        $type = $_GET['type'] ?? 'update';
+                    
+                        if ($type === 'assign-role') {
+                            $roleId = $data['role_id'] ?? null;
+                        
+                            if (!$id || !$roleId) {
+                                http_response_code(400);
+                                echo json_encode(["error" => "Missing officer ID or role ID"]);
+                                break;
+                            }
+                        
+                            $success = $this->gateway->assignRoleToOfficer($id, $roleId);
+                        
+                            if ($success) {
+                                echo json_encode(["message" => "Role assigned successfully"]);
+                            } else {
+                                http_response_code(500);
+                                echo json_encode(["error" => "Failed to assign role"]);
+                            }
+                        
+                            break;
+                        }
+                        
+                     else {
+                            // Normal update logic
+                            $rows = $this->gateway->updateOfficer($officerFull, $data);
+                            echo json_encode([
+                                "message" => "Officer $id updated successfully",
+                                "rows" => $rows
+                            ]);
+                        }
+                        break;
+                        
+                case "DELETE":
+                    $rows = $this->gateway->deleteOfficerById($id);
+    
+                    echo json_encode(["message" => "Officer $id deleted", 
+                    "rows" => $rows]);
+                    break;
+    
+                default:
+                http_response_code(405);
+                header("Allowed: GET, PATCH, DELETE");
+    
+            }  
+    
+        }
+    
+        //NOTE: Get all and Post all, url with /product for GET and POST
+        private function processCollectionRequest(string $method) {
+            switch ($method) {
+                case "GET":
+                    session_start();
+    $officer = $_SESSION['username'] ?? 'unknown';
+
+    $scheme = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
+    $currentUrl = $scheme . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+
+    $this->logger->log(
+        'officers',
+        0,
+        'read',
+        $officer,
+        "Fetched all officers for role assignment",
+        $currentUrl
+    );
+
+    $officers = $this->gateway->listAllOfficers();
+
+    echo json_encode(["officers" => $officers]);
+    break;
+                
+                case "POST":
+    
+                    default:
+                    http_response_code(405);
+                    header("Allowed: GET, POST");
+                        
+    
+            }
+            
+    
+        }
+        
+        public function getValidationErrors(array $data, bool $is_new):array {
+            $errors = [];
+            if ($is_new && empty($data["first_name"])) {
+                $errors [] = "first name is required";
+            }
+    
+            if(array_key_exists("phone", $data)){
+    
+                if (filter_var($data["phone"], FILTER_VALIDATE_INT) === false){
+                    $errors [] = "Phone must be an integer";
+                }
+            }
+            return $errors;
+    
+        }
 
 }
 

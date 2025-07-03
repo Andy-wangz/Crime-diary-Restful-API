@@ -1,4 +1,7 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -114,25 +117,49 @@ class OfficerAuthController {
     // // return;
     // }
 
+    // public function getAllOfficers(): void {
+    //     $filters = [
+    //         'agency' => $_GET['agency'] ?? null,
+    //         'role' => $_GET['role'] ?? null,
+    //         'status' => $_GET['status'] ?? null,
+    //         'search' => $_GET['search'] ?? null,
+    //         'zone' => $_GET['zone'] ?? null,
+    //         'state' => $_GET['state'] ?? null,
+    //         'lga' => $_GET['lga'] ?? null,
+    //         'division' => $_GET['division'] ?? null,        
+    //     ];
+    
+    //     $officers = $this->gateway->getAllOfficers($filters);
+    //     echo json_encode($officers);
+    // }
+    
     public function getAllOfficers(): void {
+        header("Content-Type: application/json; charset=UTF-8");
+    
         $filters = [
-            'agency' => $_GET['agency'] ?? null,
-            'role' => $_GET['role'] ?? null,
-            'status' => $_GET['status'] ?? null,
-            'search' => $_GET['search'] ?? null,
-            'zone' => $_GET['zone'] ?? null,
-            'state' => $_GET['state'] ?? null,
-            'lga' => $_GET['lga'] ?? null,
+            'agency'   => $_GET['agency']   ?? null,
+            // 'role'     => $_GET['role']     ?? null,
+            'role' => $_GET['role_id'] ?? null,
+            'status'   => $_GET['status']   ?? null,
+            'search'   => $_GET['search']   ?? null,
+            'zone'     => $_GET['zone']     ?? null,
+            'state'    => $_GET['state']    ?? null,
+            'lga'      => $_GET['lga']      ?? null,
             'division' => $_GET['division'] ?? null,        
         ];
     
-        $officers = $this->gateway->getAllOfficers($filters);
-        echo json_encode($officers);
+        try {
+            $officers = $this->gateway->getAllOfficers($filters);
+            echo json_encode($officers);
+        } catch (PDOException $e) {
+            http_response_code(500);
+            echo json_encode(["error" => $e->getMessage()]);
+            error_log("getAllOfficers error: " . $e->getMessage());
+        }
     }
     
 
     
-
     
 
     // public function getAllFilteredOfficers(): void {

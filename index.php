@@ -4,9 +4,14 @@ declare(strict_types=1);
 // require 'MetaController.php';
 
 // Error reporting (for development)
-ini_set('display_errors', '1');
-ini_set('display_startup_errors', '1');
+// ini_set('display_errors', '1');
+// ini_set('display_startup_errors', '1');
+// error_reporting(E_ALL);
+
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
+
 
 // CORS
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '*';
@@ -93,6 +98,27 @@ $dispatcher = FastRoute\simpleDispatcher(function(FastRoute\RouteCollector $r) {
     // Officer Auth routes
     $r->addRoute('POST', '/crime_api/officers[/]', 'registerOfficer');
     $r->addRoute('GET', '/crime_api/officers', 'getAllOfficers');
+    $r->addRoute('GET',    '/crime_api/officers/{id:\d+}',  'getOfficer');
+    $r->addRoute('GET', '/crime_api/officers/id/{id:\d+}', 'getOfficerId');
+    $r->addRoute('PATCH', '/crime_api/officers/{id:\d+}', 'updateOfficer');
+    $r->addRoute('DELETE', '/crime_api/officers/{id:\d+}',  'deleteOfficer');
+    // $r->addRoute('POST', '/crime_api/officers/roles[/]', 'addOfficerRole');
+    // $r->addRoute('POST', '/crime_api/officers/permission[/]', 'addOfficerPermission');
+    $r->addRoute('POST', '/crime_api/officers/roles[/]', 'RolePermissionController');
+    $r->addRoute('GET', '/crime_api/officers/roles', 'getAllRoles');
+    $r->addRoute('GET', '/crime_api/officers/permissions', 'getAllPermissions');
+    // $r->addRoute('POST', '/crime_api/officers/assign-permission[/]', 'assignPermissionToRole');
+    $r->addRoute('PATCH', '/crime_api/officers/assign-role', 'assignRoleToOfficer');
+    $r->addRoute('GET', '/crime_api/officers-list', 'listAllOfficers');
+
+
+
+
+
+
+
+
+
 
     //Get dynamic Status: roles, stauses, agencies
 
@@ -157,8 +183,6 @@ $database = new Database("localhost", "crime_db", "root", "");
 $conn = $database->getConnection();
 $dropdownController = new DropdownController($conn);
 
-//GLOBAL CONNECTION
-// $conn = $database->getConnection(); 
 
 $knownGateway = new KnownGateway($database);
 $knownController = new KnownController($knownGateway);
@@ -184,9 +208,15 @@ $authController = new AuthController($userGateway);
 
 $officerGateway = new OfficerGateway($database);
 $officerAuthController = new OfficerAuthController($officerGateway);
+$officerController = new OfficerController($officerGateway);
+$officerIdController = new OfficerIdController($officerGateway);
 
 $geoGateway = new GeoGateway($database);
 $geoController = new GeoController($geoGateway);
+
+
+$rolePermissionGateway = new RolePermissionGateway($database);
+$rolePermissionController = new RolePermissionController($rolePermissionGateway);
 
 // $dropdownController = new DropdownController($database->getConnection());
 
@@ -246,9 +276,23 @@ switch ($handler) {
         $accessRequestController->processRequest('GET', null);
         break;
 
+    case 'getAllRoles':
+        $rolePermissionController->processRequest('GET', null);
+        break;
+
+    case 'getAllPermissions':
+        $rolePermissionController->processRequest('GET', null);
+        break;
+
+    case 'listAllOfficers':
+        $officerController->processRequest('GET', null);
+        break;
+    
+
     case 'getAllOfficers':
         $officerAuthController->getAllOfficers();
         break;
+
 
 
 
@@ -289,6 +333,14 @@ switch ($handler) {
     case 'createAccessRequest':
         $accessRequestController->processRequest('POST', null);
         break;
+    
+    case 'RolePermissionController':
+        $rolePermissionController->processRequest('POST', null);
+        break;
+        
+    // case 'addOfficerPermission':
+    //     $rolePermissionController->processRequest('POST', null);
+    //     break;
 
     // case 'registerOfficer':
     //     $accessRequestController->processRequest('POST', null);
@@ -326,6 +378,14 @@ switch ($handler) {
     case 'getSuspect':
         $suspectController->processRequest('GET', $vars['id']);
         break;
+        
+    case 'getOfficer':
+        $officerController->processRequest('GET', $vars['id']);
+        break;
+
+    case 'getOfficerId':
+        $officerController->processRequest('GET', $vars['id']);
+        break;
 
         // Update by id
     case 'updateKnown':
@@ -344,6 +404,15 @@ switch ($handler) {
         $accessRequestController->processRequest('PATCH', $vars['id']);
         break;
 
+    case 'updateOfficer':
+        $officerController->processRequest('PATCH', $vars['id']);
+        break;
+
+        //WORK ON THIS NEXT
+    case 'assignRoleToOfficer':
+        $officerController->processRequest('PATCH', $vars['id']);
+        break;
+
 
         //Delete by id
     case 'deleteKnown':
@@ -358,6 +427,10 @@ switch ($handler) {
         $suspectController->processRequest('DELETE', $vars['id']);
         break;
 
+    case 'deleteOfficer':
+        $officerController->processRequest('DELETE', $vars['id']);
+        break;
+
         //Registration
 
     case 'register':
@@ -367,6 +440,7 @@ switch ($handler) {
     case 'registerOfficer':
         $officerAuthController->registerOfficer();
         break;
+
 
     case 'login':
         $authController->login();

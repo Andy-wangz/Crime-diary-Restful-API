@@ -67,10 +67,22 @@ class DropdownController {
         echo json_encode(['active', 'inactive']);
     }
 
+    // public function getRoles(): void {
+    //     header('Content-Type: application/json');
+    //     echo json_encode(['user', 'admin', 'supervisor']);
+    // }
+
     public function getRoles(): void {
         header('Content-Type: application/json');
-        echo json_encode(['user', 'admin', 'supervisor']);
+    
+        $sql = "SELECT id, name FROM roles ORDER BY name ASC";
+        $stmt = $this->conn->query($sql);
+    
+        $roles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+        echo json_encode(["roles" => $roles]);
     }
+    
 
     public function getAgencies(): void {
         header('Content-Type: application/json');

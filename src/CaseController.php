@@ -8,7 +8,8 @@ class CaseController {
 
     public function __construct(private CaseGateway $gateway) {
         // SuspectGateway::getConnection() must return a PDO instance
-        $this->logger = new AuditLogger($this->gateway->getConnection());    }
+        $this->logger = new AuditLogger($this->gateway->getConnection());  
+      }
 
     public function processRequest(string $method, ?string $id) {
         if ($id){
